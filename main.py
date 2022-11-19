@@ -1,4 +1,5 @@
 import streamlit as st
+import  streamlit_toggle as tog
 
 import numpy as np
 import  pandas as pd
@@ -20,6 +21,7 @@ from ipywidgets import widgets
 
 from matplotlib.colors import to_rgba
 
+from map import get_map
 plt.style.use('seaborn-darkgrid')
 
 # You can go offline on demand by using
@@ -52,46 +54,7 @@ measurements['date']= pd.to_datetime(measurements['date'])
 measurements['day'] = measurements['date'].map(lambda x: x.date())
 
 
-def plot_graph(date,open_view=True):
 
-    antenna_data = antenna[antenna['DATE MES EMETTEUR'].dt.date<date]
-    sensors_data = sensors[sensors['date MES'].dt.date<date]
-
-    scatter = go.Scattermapbox(
-        mode = "markers+text",
-        lon = sensors_data['longitude'],
-        lat = sensors_data['latitude'],
-        text = sensors_data['numero sonde'],
-        textposition = "bottom right",
-        name = 'Sensors',
-        marker=dict(color='blue',size=12)
-    )
-    fig = go.Figure(scatter)
-
-    fig.add_trace(go.Scattermapbox(
-            mode = "markers",
-            lon = antenna_data['LONGITUDE DD'],
-            lat = antenna_data['LATITUDE DD'],
-            name = 'Antenna'
-        )
-    )
-
-    if open_view:
-        style = 'open-street-map'
-    else:
-        style = 'carto-positron'
-
-    fig.update_layout(mapbox=dict(style=style,
-            bearing=0,
-            pitch=0,
-            zoom=4,
-            center = {"lat": sensors_data['latitude'].mean(), "lon": sensors_data['longitude'].mean()}
-        ))
-
-
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
-    #   fig.show()
-    st.plotly_chart(fig, use_container_width=True,)
 
 def plot_sensor(sensor_name, start_date, end_date):
     df_city = measurements[measurements['numero'] == sensor_name]
@@ -116,7 +79,15 @@ st.title("Antennas and sensors")
 st.write("Use the following map to search for antennas and sensors")
 reference_date = st.date_input("Reference date")
 
-plot_graph(reference_date,open_view=False)
+val = tog.st_toggle_switch(label="Full map", 
+                default_value=False, 
+                label_after = False, 
+                inactive_color = '#D3D3D3', 
+                active_color="#11567f", 
+                track_color="#29B5E8"
+                )
+fig = get_map(antenna, sensors, reference_date,open_view=val)
+st.plotly_chart(fig, use_container_width=True,)
 
 c1, c2, c3 = st.columns(3)
 with c1:
