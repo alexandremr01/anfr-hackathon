@@ -35,6 +35,7 @@ import geojson
 
 plotly.offline.init_notebook_mode(connected = True)
 import plotly.io as pio
+import plotly.express as px
 
 
 pio.renderers.default = 'colab'
@@ -46,8 +47,9 @@ antenna['CITY']=antenna['NUMERO SONDE FIXE'].apply(lambda x: x[:-3])
 sensors = pd.read_excel('data/Dates_mise en service_sondes_autonomes.xlsx')
 sensors['city']=sensors['numero sonde'].apply(lambda x: x[:-3])
 
-
-
+measurements = pd.read_csv('data/mesures_exposition_sondes_autonomes.csv', delimiter=';')
+measurements['date']= pd.to_datetime(measurements['date'])
+measurements['day'] = measurements['date'].map(lambda x: x.date())
 
 
 def plot_graph(date,open_view=True):
@@ -91,6 +93,22 @@ def plot_graph(date,open_view=True):
     #   fig.show()
     st.plotly_chart(fig, use_container_width=True,)
 
+def plot_sensor(sensor_name, start_date, end_date):
+    df_city = measurements[measurements['numero'] == sensor_name]
+    df_city = df_city.sort_values(by='date')
+    df_city['day'] = pd.to_datetime(df_city['date']).dt.date
+    df_city['day'] = df_city['day'].astype('datetime64[ns]')
+
+    df_new = pd.DataFrame()
+    df_new['day'] = pd.date_range(start=start_date, end=end_date)
+    df_new = pd.merge(df_new, df_city, on='day', how='left')
+    fig = px.line(df_new, x='date', y='E_volt_par_metre' )
+    fig.update_layout(
+        title="Exposure by day",
+        xaxis_title="Date",
+        yaxis_title="Exposure - V/m",
+    )
+    st.plotly_chart(fig, use_container_width=True,)
 
 import datetime
 st.set_page_config(layout="wide")
@@ -99,4 +117,14 @@ st.write("Use the following map to search for antennas and sensors")
 reference_date = st.date_input("Reference date")
 
 plot_graph(reference_date,open_view=False)
+
+c1, c2, c3 = st.columns(3)
+with c1:
+    selected_sensor = st.selectbox('Sensor', sensors['numero sonde'])
+with c2:
+    start_date = st.date_input("Start date", value=datetime.date(2022, 1, 1))
+with c3:
+    end_date = st.date_input("End date")
+
+plot_sensor(selected_sensor, start_date, end_date)
 
