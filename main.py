@@ -47,47 +47,53 @@ sensors = pd.read_excel('data/Dates_mise en service_sondes_autonomes.xlsx')
 sensors['city']=sensors['numero sonde'].apply(lambda x: x[:-3])
 
 
+
+
+
 def plot_graph(date,open_view=True):
 
-  antenna_data = antenna[antenna['DATE MES EMETTEUR']<date]
-  sensors_data = sensors[sensors['date MES']<date]
-  fig = go.Figure(go.Scattermapbox(
-                                    mode = "markers+text",
-                                    lon = sensors_data['longitude'],
-                                    lat = sensors_data['latitude'],
-                                    text = sensors_data['numero sonde'],
-                                    textposition = "bottom right",
-                                    name = 'Sensors',
-                                    marker=dict(color='blue',size=12)
-                                  )
-                )
+    antenna_data = antenna[antenna['DATE MES EMETTEUR']<date]
+    sensors_data = sensors[sensors['date MES']<date]
 
-  fig.add_trace(go.Scattermapbox(
-                                      mode = "markers",
-                                      lon = antenna_data['LONGITUDE DD'],
-                                      lat = antenna_data['LATITUDE DD'],
-                                      name = 'Antenna'
-                                    )
-                  )
-  
-  if open_view:
-    style = 'open-street-map'
-  else:
-    style = 'carto-positron'
+    scatter = go.Scattermapbox(
+        mode = "markers+text",
+        lon = sensors_data['longitude'],
+        lat = sensors_data['latitude'],
+        text = sensors_data['numero sonde'],
+        textposition = "bottom right",
+        name = 'Sensors',
+        marker=dict(color='blue',size=12)
+    )
+    fig = go.Figure(scatter)
 
-  fig.update_layout(mapbox=dict(style=style,
-          bearing=0,
-          pitch=0,
-          zoom=12,
-          center = {"lat": sensors_data['latitude'].mean(), "lon": sensors_data['longitude'].mean()}
-      ))
-  
-  
-  fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-#   fig.show()
-  st.plotly_chart(fig, use_container_width=True)
-  
+    fig.add_trace(go.Scattermapbox(
+            mode = "markers",
+            lon = antenna_data['LONGITUDE DD'],
+            lat = antenna_data['LATITUDE DD'],
+            name = 'Antenna'
+        )
+    )
 
+    if open_view:
+        style = 'open-street-map'
+    else:
+        style = 'carto-positron'
+
+    fig.update_layout(mapbox=dict(style=style,
+            bearing=0,
+            pitch=0,
+            zoom=4,
+            center = {"lat": sensors_data['latitude'].mean(), "lon": sensors_data['longitude'].mean()}
+        ))
+
+
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    #   fig.show()
+    st.plotly_chart(fig, use_container_width=True)
+
+
+
+st.set_page_config(layout="wide")
 st.title("Antennas and sensors")
 st.write("Use the following map to search for antennas and sensors")
 plot_graph('2021-04-23',open_view=False)
