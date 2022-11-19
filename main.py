@@ -52,8 +52,8 @@ sensors['city']=sensors['numero sonde'].apply(lambda x: x[:-3])
 
 def plot_graph(date,open_view=True):
 
-    antenna_data = antenna[antenna['DATE MES EMETTEUR']<date]
-    sensors_data = sensors[sensors['date MES']<date]
+    antenna_data = antenna[antenna['DATE MES EMETTEUR'].dt.date<date]
+    sensors_data = sensors[sensors['date MES'].dt.date<date]
 
     scatter = go.Scattermapbox(
         mode = "markers+text",
@@ -87,14 +87,16 @@ def plot_graph(date,open_view=True):
         ))
 
 
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
     #   fig.show()
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True,)
 
 
-
+import datetime
 st.set_page_config(layout="wide")
 st.title("Antennas and sensors")
 st.write("Use the following map to search for antennas and sensors")
-plot_graph('2021-04-23',open_view=False)
+reference_date = st.date_input("Reference date")
+
+plot_graph(reference_date,open_view=False)
 
