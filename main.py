@@ -22,6 +22,7 @@ from matplotlib.colors import to_rgba
 
 import datetime
 
+from prediction import get_relative_error, get_comparative_exposure, get_absolute_std_error
 from map import get_map
 plt.style.use('seaborn-darkgrid')
 
@@ -64,8 +65,9 @@ measurements['E_volt_par_metre'] = (measurements['E_volt_par_metre'] - measureme
 
 
 mean = measurements[['day', 'E_volt_par_metre'] ].groupby('day').mean().reset_index()
+# mean['date'] = pd.to_datetime(mean['day'])
+# mean['day'] = mean['day'].map(lambda x: x.date()).astype('datetime64[ns]')
 mean['day'] = pd.to_datetime(mean['day']).map(lambda x: x.date()).astype('datetime64[ns]')
-
 def get_highest_frequencies(ffty_half, n_max=5):
     max = np.argpartition(abs(ffty_half), -25)[-25:]
     max = max[np.argsort(abs(ffty)[max])]
@@ -73,11 +75,15 @@ def get_highest_frequencies(ffty_half, n_max=5):
     max = max[np.where((max > 3) ) ]
     periods = 1 / (max / 2 / (2*len(ffty_half)))
     _, idx = np.unique(np.round(periods/24), return_index=True)
-    values = np.round(periods[np.sort(idx)]/24)
+    values = np.around(periods[np.sort(idx)]/24, decimals=2)
     return np.round(ffty_half[max[:n_max]]), values[:n_max]
 
 def get_city_data(sensor_name, start_date, end_date):
-    df_city = measurements[measurements['numero'] == sensor_name]
+    if sensor_name == 'Mean Profile':
+        df_city = mean.copy()
+        df_city['date'] = pd.to_datetime(df_city['day'])
+    else:
+        df_city = measurements[measurements['numero'] == sensor_name]
     df_city = df_city.sort_values(by='date')
     df_city['day'] = pd.to_datetime(df_city['date']).dt.date
     df_city['day'] = df_city['day'].astype('datetime64[ns]')
@@ -154,9 +160,12 @@ val = st.checkbox("Full map")
 fig = get_map(antenna, sensors, reference_date,open_view=val)
 st.plotly_chart(fig, use_container_width=True,)
 
+sensor_options = list(sensors['numero sonde'])
+sensor_options.append('Mean Profile')
+
 c1, c2, c3 = st.columns(3)
 with c1:
-    selected_sensor = st.selectbox('Sensor', sensors['numero sonde'])
+    selected_sensor = st.selectbox('Sensor', sensor_options)
 with c2:
     start_date = st.date_input("Start date", value=datetime.date(2022, 1, 1))
 with c3:
@@ -181,21 +190,31 @@ def lowpass(ffty, a=30):
 lp_filtered = lowpass(ffty)
 
 fig_sensor = plot_sensor(df_city, selected_sensor, lp_filtered)
-# result = seasonal_decompose(series, model='multiplicable', period=7*24*2)
-# fig_seasonal = plot_seasonal(result)
+result = seasonal_decompose(series, model='additive', period=48)
+fig_seasonal = plot_seasonal(result)
 
 st.plotly_chart(fig_sensor, use_container_width=True,)
 
-# tab1, tab2 = st.tabs(["Fourrier", "Seasonal"])
+tab1, tab2, tab3 = st.tabs(["Fourrier", "Prediction model", "Seasonal"])
 
-# with tab1:
-hide_f0 = st.checkbox("Hide f=0")
-fig_fourrier = plot_fourrier(fftx, ffty, hide_f0)
+with tab1:
+    hide_f0 = st.checkbox("Hide f=0")
+    fig_fourrier = plot_fourrier(fftx, ffty, hide_f0)
 
-st.plotly_chart(fig_fourrier, use_container_width=True,)
-for pair in pairs:
-    st.write(f'Period {int(pair[0])} days, amplitude {pair[1]}')
+    st.plotly_chart(fig_fourrier, use_container_width=True,)
+    for pair in pairs:
+        st.write(f'Period {(pair[0])} days, amplitude {pair[1]}')
 
-# with tab2:
+if selected_sensor != 'Mean Profile':
+    X=pd.read_csv(f'data/Data Predicted/{selected_sensor}.csv')
+    with tab2:
+        fig_error = get_relative_error(X, sensor_name=selected_sensor)
+        st.plotly_chart(fig_error, use_container_width=True,)
+        fig_comp = get_comparative_exposure(X, sensor_name=selected_sensor)
+        st.plotly_chart(fig_comp, use_container_width=True,)
+        fig_abs, outliers = get_absolute_std_error(X, sensor_name=selected_sensor)
+        st.plotly_chart(fig_abs, use_container_width=True,)
+        st.table(outliers)
 
-#     st.plotly_chart(fig_seasonal, use_container_width=True,)
+with tab3:
+    st.plotly_chart(fig_seasonal, use_container_width=True,)
