@@ -102,6 +102,7 @@ def plot_sensor(df, sensor_name, lp_filtered):
                     name='Sensors average'))
     fig.add_trace(go.Scatter(x=df['date'], y=lp_filtered,
                     mode='lines',
+                    line=dict(color='purple'),
                     name='Lowpass'))
     return fig
 
@@ -161,18 +162,18 @@ with c3:
 
 df_city = get_city_data(selected_sensor, start_date, end_date)
 series = df_city['E_volt_par_metre_x']
-series = pd.Series(np.where(np.isnan(series), series.interpolate(method='linear'), series))
+# series = pd.Series(np.where(np.isnan(series), series.interpolate(method='linear'), series))
 series = series[~np.isnan(series)]
 
 ffty = abs(np.fft.fft(series))
 fft_half = ffty[:int(len(ffty)/2)]
 max_frequencies, periods = get_highest_frequencies(fft_half)
 pairs = zip(periods, max_frequencies)
-fftx = np.array(list(range(len(fft_half[1:])))) * (1/2) / len(series)
+fftx = np.array( list(range(len(fft_half[1:])))) * (1/2) / len(series)
 
 def lowpass(ffty):
     ffty_aux = ffty.copy()
-    ffty_aux[50:] = 0
+    ffty_aux[50:-50] = 0
     return np.real(np.fft.ifft(ffty_aux))
 
 lp_filtered = lowpass(ffty)
