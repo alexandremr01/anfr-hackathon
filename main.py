@@ -21,6 +21,8 @@ from ipywidgets import widgets
 
 from matplotlib.colors import to_rgba
 
+import datetime
+
 from map import get_map
 plt.style.use('seaborn-darkgrid')
 
@@ -53,7 +55,8 @@ measurements = pd.read_csv('data/mesures_exposition_sondes_autonomes.csv', delim
 measurements['date']= pd.to_datetime(measurements['date'])
 measurements['day'] = measurements['date'].map(lambda x: x.date())
 
-
+mean = measurements[['day', 'E_volt_par_metre'] ].groupby('day').mean().reset_index()
+mean['day'] = pd.to_datetime(mean['day']).map(lambda x: x.date()).astype('datetime64[ns]')
 
 
 def plot_sensor(sensor_name, start_date, end_date):
@@ -65,15 +68,23 @@ def plot_sensor(sensor_name, start_date, end_date):
     df_new = pd.DataFrame()
     df_new['day'] = pd.date_range(start=start_date, end=end_date)
     df_new = pd.merge(df_new, df_city, on='day', how='left')
-    fig = px.line(df_new, x='date', y='E_volt_par_metre' )
+
+    df_new = pd.merge(df_new, mean, on='day', how='left')
+    fig = go.Figure()
+
     fig.update_layout(
         title="Exposure by day",
         xaxis_title="Date",
         yaxis_title="Exposure - V/m",
     )
+    fig.add_trace(go.Scatter(x=df_new['day'], y=df_new['E_volt_par_metre_x'],
+                    mode='lines',
+                    name=sensor_name))
+    fig.add_trace(go.Scatter(x=df_new['day'], y=df_new['E_volt_par_metre_y'],
+                    mode='lines',
+                    name='Sensors average'))
     st.plotly_chart(fig, use_container_width=True,)
 
-import datetime
 st.set_page_config(layout="wide")
 st.title("Antennas and sensors")
 st.write("Use the following map to search for antennas and sensors")
