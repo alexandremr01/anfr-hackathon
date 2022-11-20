@@ -44,9 +44,10 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 
 pio.renderers.default = 'colab'
 
-antenna=pd.read_csv('data/Etats reseaux telecoms/2021_06_30_Etat reseaux.csv',sep=';')
+antenna=pd.read_csv('data/antennas.csv')
 antenna["DATE MES EMETTEUR"] =  pd.to_datetime(antenna["DATE MES EMETTEUR"], format="%d/%m/%Y")
 antenna['CITY']=antenna['NUMERO SONDE FIXE'].apply(lambda x: x[:-3])
+antenna['FINAL TRIMESTER']= pd.to_datetime(antenna['FINAL TRIMESTER'])
 
 sensors = pd.read_excel('data/Dates_mise en service_sondes_autonomes.xlsx')
 sensors['city']=sensors['numero sonde'].apply(lambda x: x[:-3])
@@ -67,12 +68,13 @@ mean['day'] = pd.to_datetime(mean['day']).map(lambda x: x.date()).astype('dateti
 
 def get_highest_frequencies(ffty_half, n_max=5):
     max = np.argpartition(abs(ffty_half), -25)[-25:]
+    max = max[np.argsort(abs(ffty)[max])]
     max = np.flip(max)
     max = max[np.where((max > 3) ) ]
     periods = 1 / (max / 2 / (2*len(ffty_half)))
-    _,idx = np.unique(np.round(periods), return_index=True)
-    values = np.round(periods[np.sort(idx)]) / 24
-    return max[:n_max], values[:n_max]
+    _, idx = np.unique(np.round(periods/24), return_index=True)
+    values = np.round(periods[np.sort(idx)]/24)
+    return np.round(ffty_half[max[:n_max]]), values[:n_max]
 
 def get_city_data(sensor_name, start_date, end_date):
     df_city = measurements[measurements['numero'] == sensor_name]
@@ -143,7 +145,7 @@ def plot_seasonal(result):
 
 
 st.set_page_config(layout="wide")
-st.title("Antennas and sensors")
+st.title("UnExpose")
 st.write("Use the following map to search for antennas and sensors")
 
 
@@ -171,9 +173,9 @@ max_frequencies, periods = get_highest_frequencies(fft_half)
 pairs = zip(periods, max_frequencies)
 fftx = np.array( list(range(len(fft_half[1:])))) * (1/2) / len(series)
 
-def lowpass(ffty):
+def lowpass(ffty, a=30):
     ffty_aux = ffty.copy()
-    ffty_aux[50:-50] = 0
+    ffty_aux[a:-a] = 0
     return np.real(np.fft.ifft(ffty_aux))
 
 lp_filtered = lowpass(ffty)
@@ -184,15 +186,15 @@ fig_sensor = plot_sensor(df_city, selected_sensor, lp_filtered)
 
 st.plotly_chart(fig_sensor, use_container_width=True,)
 
-tab1, tab2 = st.tabs(["Fourrier", "Seasonal"])
+# tab1, tab2 = st.tabs(["Fourrier", "Seasonal"])
 
-with tab1:
-    hide_f0 = st.checkbox("Hide f=0")
-    fig_fourrier = plot_fourrier(fftx, ffty, hide_f0)
+# with tab1:
+hide_f0 = st.checkbox("Hide f=0")
+fig_fourrier = plot_fourrier(fftx, ffty, hide_f0)
 
-    st.plotly_chart(fig_fourrier, use_container_width=True,)
-    for pair in pairs:
-        st.write(f'Period {pair[0]} days, amplitude {pair[1]}')
+st.plotly_chart(fig_fourrier, use_container_width=True,)
+for pair in pairs:
+    st.write(f'Period {int(pair[0])} days, amplitude {pair[1]}')
 
 # with tab2:
 

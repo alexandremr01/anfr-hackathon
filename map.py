@@ -15,7 +15,7 @@ def antenna_to_angle(row):
 
 def get_map(antenna, sensors, date,open_view=True):
 
-    antenna_data = antenna[antenna['DATE MES EMETTEUR'].dt.date<date]
+    antenna_data = antenna[(antenna['DATE MES EMETTEUR'].dt.date<date) & (antenna['FINAL TRIMESTER'].dt.date>date)]
     sensors_data = sensors[sensors['date MES'].dt.date<date]
 
     # Gets the angular distance
