@@ -12,7 +12,7 @@ def antenna_to_angle(row):
   antena = np.array([row['LONGITUDE DD'], row['LATITUDE DD']])
   angle = row['AZIMUT ANTENNE']
   return np.rad2deg(get_angle(sensor, antena, np.deg2rad(angle)))
-
+ 
 def get_map(antenna, sensors, date,open_view=True):
 
     antenna_data = antenna[(antenna['DATE MES EMETTEUR'].dt.date<date) & (antenna['FINAL TRIMESTER'].dt.date>date)]
